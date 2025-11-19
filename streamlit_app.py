@@ -11,14 +11,14 @@ from twilio.rest import Client      # Used to send messages with Twilio
 # -------------------------------------------------------------
 # 🔑 TWILIO DETAILS (CHANGE TO YOUR OWN CREDENTIALS)
 # -------------------------------------------------------------
-TWILIO_ACCOUNT_SID = "AC9b0b3cd58ad339916c3b7e02449eed0b"   # Your Twilio account ID
-TWILIO_AUTH_TOKEN = "47ea0749f8814460cf0ae81945ea38ff"      # Your Twilio secret token
+TWILIO_ACCOUNT_SID = "ACe855d3519d798fdb8d4017b8692f0860"   # Your Twilio account ID
+TWILIO_AUTH_TOKEN = "d1da9a44a4fadbc430c6a394c328be97"      # Your Twilio secret token
 
 # Twilio WhatsApp number (from Sandbox)
 TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886"
 
 # Twilio SMS number (use your Twilio phone number)
-TWILIO_SMS_FROM = "+16362095482"     # Replace with your Twilio SMS number
+TWILIO_SMS_FROM = "+18542013278"     # Replace with your Twilio SMS number
 
 # Create Twilio client
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
