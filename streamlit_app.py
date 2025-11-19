@@ -1,12 +1,12 @@
 # -------------------------------------------------------------
-# 📱 Streamlit SMS + WhatsApp Reminder App (WITH AUTO SCHEDULER)
+# 📱 Streamlit SMS + WhatsApp Reminder App (WORKING AUTO SCHEDULER)
 # -------------------------------------------------------------
 
 import streamlit as st
 import json
 from datetime import datetime
 from twilio.rest import Client
-import time
+from streamlit_autorefresh import st_autorefresh   # <-- AUTO REFRESH
 
 # -------------------------------------------------------------
 # 🔑 TWILIO DETAILS
@@ -39,7 +39,7 @@ def save_reminders(reminders):
         json.dump(reminders, f, indent=2)
 
 # -------------------------------------------------------------
-# 💬 Send WhatsApp message
+# 💬 Send WhatsApp
 # -------------------------------------------------------------
 def send_whatsapp(to_phone, message):
     try:
@@ -53,7 +53,7 @@ def send_whatsapp(to_phone, message):
         return False, str(e)
 
 # -------------------------------------------------------------
-# 📱 Send SMS message
+# 📱 Send SMS
 # -------------------------------------------------------------
 def send_sms(to_phone, message):
     try:
@@ -67,30 +67,31 @@ def send_sms(to_phone, message):
         return False, str(e)
 
 # -------------------------------------------------------------
-# 🧠 Load into Session
+# SESSION STATE
 # -------------------------------------------------------------
 if "reminders" not in st.session_state:
     st.session_state["reminders"] = load_reminders()
 
 # -------------------------------------------------------------
-# 🌟 App Title
+# AUTO REFRESH EVERY 60 SEC
+# -------------------------------------------------------------
+st_autorefresh(interval=60000, key="scheduler_refresh")
+
+# -------------------------------------------------------------
+# UI
 # -------------------------------------------------------------
 st.title("📩 SMS + WhatsApp Reminder App (Auto Scheduler)")
 
-# -------------------------------------------------------------
-# 📝 User Inputs
-# -------------------------------------------------------------
-reminder_text = st.text_input("Enter your reminder message:", placeholder="Drink water")
-phone_number = st.text_input("Enter phone number with country code:", placeholder="+918888888888")
+reminder_text = st.text_input("Enter your reminder message:")
+phone_number = st.text_input("Enter phone number (+91...)")
 
-delivery_method = st.radio("How do you want to send the reminder?", ["WhatsApp", "SMS"])
+delivery_method = st.radio("Send Using:", ["WhatsApp", "SMS"])
 
-date_sel = st.date_input("Select reminder date")
-
-time_str = st.text_input("Enter time (24H, HH:MM):", value="09:00")
+date_sel = st.date_input("Select reminder date:")
+time_str = st.text_input("Enter time (24H format HH:MM)", value="09:00")
 
 # -------------------------------------------------------------
-# 💾 Save Reminder
+# SAVE REMINDER
 # -------------------------------------------------------------
 if st.button("Save Reminder"):
     try:
@@ -106,51 +107,50 @@ if st.button("Save Reminder"):
         })
 
         save_reminders(st.session_state["reminders"])
-        st.success("Reminder saved successfully!")
+        st.success("Reminder saved!")
 
     except:
-        st.error("Incorrect time format. Use HH:MM like 14:30.")
+        st.error("Invalid time format. Use HH:MM")
 
 # -------------------------------------------------------------
-# 📋 Show Saved Reminders
+# DISPLAY REMINDERS
 # -------------------------------------------------------------
 st.subheader("📁 Saved Reminders")
 
-if len(st.session_state["reminders"]) == 0:
-    st.info("No reminders saved yet.")
-else:
-    for i, r in enumerate(st.session_state["reminders"]):
-        st.write(f"**Message:** {r['text']}")
-        st.write(f"**To:** {r['phone']}")
-        st.write(f"**Method:** {r['method']}")
-        st.write(f"**When:** {r['datetime']}")
-        st.write(f"**Sent:** {'Yes' if r.get('sent', False) else 'No'}")
+for i, r in enumerate(st.session_state["reminders"]):
 
-        if st.button(f"Send Now #{i}"):
-            if r["method"] == "WhatsApp":
-                ok, msg = send_whatsapp(r["phone"], r["text"])
-            else:
-                ok, msg = send_sms(r["phone"], r["text"])
+    st.write(f"**Message:** {r['text']}")
+    st.write(f"**Phone:** {r['phone']}")
+    st.write(f"**Method:** {r['method']}")
+    st.write(f"**When:** {r['datetime']}")
+    st.write(f"**Sent:** {'Yes' if r['sent'] else 'No'}")
 
-            if ok:
-                r["sent"] = True
-                save_reminders(st.session_state["reminders"])
-                st.success(f"{r['method']} message sent!")
-            else:
-                st.error("Failed: " + str(msg))
+    if st.button(f"Send Now #{i}"):
+        if r["method"] == "WhatsApp":
+            ok, msg = send_whatsapp(r["phone"], r["text"])
+        else:
+            ok, msg = send_sms(r["phone"], r["text"])
 
-        st.write("---")
+        if ok:
+            r["sent"] = True
+            save_reminders(st.session_state["reminders"])
+            st.success("Message sent!")
+        else:
+            st.error(msg)
+
+    st.write("---")
 
 # -------------------------------------------------------------
-# ⏰ AUTO-SCHEDULER (Runs every minute)
+# AUTO SCHEDULER
 # -------------------------------------------------------------
-st.subheader("⏱ Auto Scheduler Running...")
+st.subheader("⏱ Auto Scheduler Status:")
 
 current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
 st.write(f"Current Time: **{current_time}**")
 
 for r in st.session_state["reminders"]:
-    if r["datetime"] == current_time and not r.get("sent", False):
+
+    if r["datetime"] == current_time and not r["sent"]:
 
         st.warning(f"Sending scheduled message: {r['text']}")
 
@@ -162,10 +162,6 @@ for r in st.session_state["reminders"]:
         if ok:
             r["sent"] = True
             save_reminders(st.session_state["reminders"])
-            st.success(f"{r['method']} message sent automatically!")
+            st.success("Message sent automatically!")
         else:
-            st.error("Failed: " + msg)
-
-# Refresh page every 60 seconds
-st_autorefresh = st.experimental_rerun()
-time.sleep(60)
+            st.error(msg)
