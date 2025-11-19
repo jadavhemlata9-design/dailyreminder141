@@ -1,10 +1,10 @@
 # -------------------------------------------------------------
-# 📱 Streamlit SMS + WhatsApp Reminder App (Auto Scheduler, no extra libs)
+# 📱 Streamlit SMS + WhatsApp Reminder App (Auto Scheduler, IST Time)
 # -------------------------------------------------------------
 
 import streamlit as st
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from twilio.rest import Client
 
 # --------------------------
@@ -18,6 +18,15 @@ TWILIO_SMS_FROM = "+18542013278"
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 FILE_NAME = "all_reminders.json"
+
+# -----------------------------------------------------
+# IST TIME FUNCTION  (MAIN FIX YOU ASKED FOR)
+# -----------------------------------------------------
+def get_ist_now():
+    utc_now = datetime.utcnow()
+    ist_now = utc_now + timedelta(hours=5, minutes=30)
+    return ist_now
+
 
 # --------------------------
 # Helpers: load / save
@@ -65,46 +74,49 @@ if "reminders" not in st.session_state:
     st.session_state["reminders"] = load_reminders()
 
 # --------------------------
-# Auto-refresh using meta tag (browser will reload page every 60s)
+# Auto-refresh: reload page every 60 seconds
 # --------------------------
-# Put this near top so page reload happens automatically in browser.
-# 60 seconds -> change content="60" to your preferred interval (in seconds).
 st.markdown('<meta http-equiv="refresh" content="60">', unsafe_allow_html=True)
 
 # --------------------------
 # UI
 # --------------------------
-st.title("📩 SMS + WhatsApp Reminder App (Auto Scheduler)")
+st.title("📩 SMS + WhatsApp Reminder App (IST Auto Scheduler)")
 
 with st.form("add_reminder_form", clear_on_submit=True):
     reminder_text = st.text_input("Enter reminder message:", placeholder="Drink water")
     phone_number = st.text_input("Enter phone number with country code:", placeholder="+918888888888")
     delivery_method = st.radio("Send using:", ["WhatsApp", "SMS"])
-    date_sel = st.date_input("Select reminder date:")
-    time_str = st.text_input("Enter time (24H format HH:MM):", value="09:00")
+    date_sel = st.date_input("Select reminder date (IST):")
+    time_str = st.text_input("Enter time (24H format HH:MM IST):", value="09:00")
     submitted = st.form_submit_button("Save Reminder")
 
 if submitted:
     try:
         user_time = datetime.strptime(time_str, "%H:%M").time()
+
+        # COMBINE WITH IST DATE
         send_datetime = datetime.combine(date_sel, user_time)
+
         new = {
             "text": reminder_text,
             "phone": phone_number,
             "method": delivery_method,
+            # SAVE AS IST STRING
             "datetime": send_datetime.strftime("%Y-%m-%d %H:%M"),
             "sent": False
         }
         st.session_state["reminders"].append(new)
         save_reminders(st.session_state["reminders"])
-        st.success("Reminder saved!")
+        st.success("Reminder saved using IST!")
     except Exception:
         st.error("Invalid time format — use HH:MM (24-hour).")
 
 # --------------------------
 # Display saved reminders
 # --------------------------
-st.subheader("📁 Saved Reminders")
+st.subheader("📁 Saved Reminders (IST)")
+
 if len(st.session_state["reminders"]) == 0:
     st.info("No reminders saved yet.")
 else:
@@ -112,9 +124,10 @@ else:
         st.write(f"**Message:** {r['text']}")
         st.write(f"**To:** {r['phone']}")
         st.write(f"**Method:** {r['method']}")
-        st.write(f"**When:** {r['datetime']}")
+        st.write(f"**When (IST):** {r['datetime']}")
         st.write(f"**Sent:** {'Yes' if r.get('sent', False) else 'No'}")
 
+        # Manual send
         if st.button(f"Send Now #{i}"):
             if r["method"] == "WhatsApp":
                 ok, msg = send_whatsapp(r["phone"], r["text"])
@@ -124,26 +137,27 @@ else:
             if ok:
                 r["sent"] = True
                 save_reminders(st.session_state["reminders"])
-                st.success("Message sent!")
+                st.success("Message sent manually!")
             else:
                 st.error(f"Failed to send: {msg}")
 
         st.write("---")
 
 # --------------------------
-# Auto scheduler check
+# Auto Scheduler (IST)
 # --------------------------
-st.subheader("⏱ Auto Scheduler Status")
+st.subheader("⏱ Auto Scheduler (IST)")
 
-# Use server-local current time. If hosting in different timezone, results follow server time.
-current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-st.write(f"Current Time (server): **{current_time}**")
+current_ist = get_ist_now().strftime("%Y-%m-%d %H:%M")
+
+st.write(f"Current IST Time: **{current_ist}**")
+
 sent_any = False
 
 for r in st.session_state["reminders"]:
-    # equality check by minute string to avoid seconds mismatch
-    if r["datetime"] == current_time and not r.get("sent", False):
+    if r["datetime"] == current_ist and not r.get("sent", False):
         st.info(f"Sending scheduled message to {r['phone']}: {r['text']}")
+
         if r["method"] == "WhatsApp":
             ok, msg = send_whatsapp(r["phone"], r["text"])
         else:
@@ -152,16 +166,18 @@ for r in st.session_state["reminders"]:
         if ok:
             r["sent"] = True
             save_reminders(st.session_state["reminders"])
-            st.success(f"{r['method']} message sent automatically!")
             sent_any = True
+            st.success(f"{r['method']} message sent automatically (IST)!")
         else:
             st.error(f"Failed to send scheduled message: {msg}")
 
 if not sent_any:
-    st.write("No scheduled messages to send at this minute.")
+    st.write("No scheduled messages at this IST minute.")
 
 # --------------------------
 # Helpful note
 # --------------------------
-st.caption("Note: The page reloads every 60 seconds (browser-side). Keep the app open in a tab for automatic sending. "
-           "Server time is used to match reminders — if your server is in a different timezone, convert times accordingly.")
+st.caption(
+    "This app runs entirely in IST (Indian Standard Time). "
+    "Keep the tab open; the scheduler checks every 60 seconds automatically."
+)
