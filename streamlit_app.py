@@ -12,7 +12,7 @@ from twilio.rest import Client      # Used to send messages with Twilio
 # 🔑 TWILIO DETAILS (CHANGE TO YOUR OWN CREDENTIALS)
 # -------------------------------------------------------------
 TWILIO_ACCOUNT_SID = "ACe855d3519d798fdb8d4017b8692f0860"   # Your Twilio account ID
-TWILIO_AUTH_TOKEN = "d1da9a44a4fadbc430c6a394c328be97"      # Your Twilio secret token
+TWILIO_AUTH_TOKEN = "b28ef14855ce695a499ce9e669578180"      # Your Twilio secret token
 
 # Twilio WhatsApp number (from Sandbox)
 TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886"
